@@ -21,19 +21,20 @@ def eightpoint(pts1, pts2, M):
     # pass
 
     # normalise the points first
-    pts1_normalised = pts1/M
-    pts2_normalised = pts2/M
+    pts1_normalised = pts1 /float(M)
+    pts2_normalised = pts2 /float(M)
 
-    x1 = pts1[:, 0]
-    y1 = pts1[:, 1]
+    x1 = pts1_normalised[:, 0]
+    y1 = pts1_normalised[:, 1]
 
-    x2 = pts2[:, 0]
-    y2 = pts2[:, 1]
+    x2 = pts2_normalised[:, 0]
+    y2 = pts2_normalised[:, 1]
 
     # form matrix a.
     a = np.zeros((pts1.shape[0], 9))
 
     a[:, 0] = x2 * x1 
+    print("shape: ", a[:, 0].shape)
     a[:, 1] = x2 * y1
     a[:, 2] = x2
     a[:, 3] = y2 * x1
@@ -43,6 +44,7 @@ def eightpoint(pts1, pts2, M):
     a[:, 7] = y1
     a[:, 8] = np.ones(pts1.shape[0])
 
+    print("shape of a is: ", a.shape)
     # find the least square solution using SVD.
     u, s, vh = np.linalg.svd(a)
     
@@ -53,14 +55,15 @@ def eightpoint(pts1, pts2, M):
     # impose constraint
     fundamental_matrix = helper._singularize(fundamental_matrix)
 
-    fundamental_matrix = helper.refineF(fundamental_matrix, pts1, pts2)
+    fundamental_matrix = helper.refineF(fundamental_matrix, 
+        pts1_normalised, pts2_normalised)
 
     # rescale the F matrix back
-    rescale_matrix = np.array([[1.0/M, 0.0, 0.0], [0, 1.0/M, 0.0], [0.0, 0.0, 1.0/M]])
+    rescale_matrix = np.array([[1.0/M, 0.0, 0.0], [0, 1.0/M, 0.0], [0.0, 0.0, 1.0]])
 
-    fundamental_matrix = rescale_matrix.T.dot(fundamental_matrix.dot(rescale_matrix))
+    fundamental_matrix = rescale_matrix.T.dot((fundamental_matrix.dot(rescale_matrix)))
     
-    np.savez('q2_1.npz',F=fundamental_matrix, M=M)
+    np.savez('q2_1.npz', F=fundamental_matrix, M=M)
 
     return fundamental_matrix
 
@@ -77,7 +80,7 @@ def essentialMatrix(F, K1, K2):
     # pass
 
     # check the order of K1 and K2 here.
-    E = K1.T.dot(F).dot(K2)
+    E = K2.T.dot(F).dot(K1)
     
     return E
 
@@ -201,7 +204,77 @@ Q5.1: RANSAC method.
 '''
 def ransacF(pts1, pts2, M, nIters, tol):
     # Replace pass by your implementation
-    pass
+    # pass
+
+    pts1_normalised = pts1/M
+    pts2_normalised = pts2/M
+
+    pts1_h = np.vstack((pts1.T, np.ones(pts1.shape[0]))).T
+    pts2_h = np.vstack((pts2.T, np.ones(pts2.shape[0]))).T
+
+    print("pts1 shape homo: ", pts1_h.shape)
+    print("pts1 homo 0: ", pts1_h[0])
+    print("pts1 normal 0: ", pts1[0])
+    
+    error = np.inf
+    min_error = np.inf
+    iters = 0
+
+    best_inlier_count = 0
+    inliers1 = None
+    inliers2 = None
+    inlier_ind = None
+    while iters < nIters:
+        indices = np.random.randint(0, pts1.shape[0], 8)
+        # print(pts1[indices, :].shape)
+        fundamental_matrix = eightpoint(pts1[indices, :], pts2[indices, :], M)
+
+        # compute the inliers and outliers
+        # mapped_pts = fundamental_matrix.dot(pts1_h)
+
+        # pts1_dh = mapped_pts / mapped_pts[-1, :]
+        # pts1_dh = pts1_dh.Tr
+
+        # pts1_dh = pts1[:, [0, 1]]
+
+        error = pts2_h.T * (fundamental_matrix.dot(pts1_h.T))
+        print(error[:, 0])
+        error = abs(np.sum(error, axis=0))
+        # print("shape of error is: ", error.shape)
+        print(error[0])
+        print(pts2_h[0].dot(fundamental_matrix.dot(pts1_h[0].reshape(3, 1))))
+        
+        print("======")
+
+        print(pts2_h[0] * fundamental_matrix.dot(pts1_h.T)[:, 0])        
+        print(pts2_h[0].dot(fundamental_matrix.dot(pts1_h[0].reshape(3, 1))))
+
+        num_inlers = np.sum(error < tol)
+
+        if num_inlers >= best_inlier_count:
+            best_inlier_count = num_inlers
+            ind = np.argwhere(error < tol).flatten()
+            
+            inliers1 = pts1[ind, :]
+            inliers2 = pts2[ind, :]
+            inlier_ind = ind
+
+        iters +=1 
+        print("completed one iteration...")
+
+    print("shape of inliers1 is: ", inliers1.shape)
+    print("shape of inliers2 is: ", inliers2.shape)
+
+    fundamental_matrix = eightpoint(inliers1, inliers2, M)
+
+    print("shape of fundamental_matrix is: ", fundamental_matrix.shape)
+
+    inlier_bool = np.ones(pts1.shape[0]) > 2
+    # inlier_bool = 
+    inlier_bool[inlier_ind] = True
+    print(inlier_bool)
+    print(inlier_ind)
+    return fundamental_matrix, inlier_bool
 
 '''
 Q5.2: Rodrigues formula.
