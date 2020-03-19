@@ -82,6 +82,5 @@ object_coords, error = submission.triangulate(c1, pts1, c2, pts2)
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.scatter(object_coords[:, 0], object_coords[:, 1], object_coords[:, 2])
-
+np.savez('q4_2.npz', F=fundamental_matrix, M1=extrinsic_mat1, M2=m2, C1=c1, C2=c2)
 plt.show()
-np.savez('q4_2.npz', F=fundamental_matrix, M1=m1, M2=m2, C1=c1, C2=c2)

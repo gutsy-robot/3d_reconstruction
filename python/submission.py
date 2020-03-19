@@ -283,8 +283,20 @@ Q5.2: Rodrigues formula.
 '''
 def rodrigues(r):
     # Replace pass by your implementation
-    pass
-
+    # pass
+    t = np.linalg.norm(r)
+    if t != 0:
+        a = r / t
+        a1 = u[0,0]
+        a2 = u[1,0]
+        a3 = u[2,0]
+        cross = np.array([[0, -a3, a2],
+                          [a3, 0, -a1],
+                          [-a2, u1, 0]])
+        R = np.identity(3) * np.cos(t) + (1 - np.cos(t)) * u.dot(u.T) + np.sin(t) * cross
+        return R 
+    else:
+        return np.identity(3)
 '''
 Q5.2: Inverse Rodrigues formula.
     Input:  R, a rotation matrix
@@ -292,7 +304,47 @@ Q5.2: Inverse Rodrigues formula.
 '''
 def invRodrigues(R):
     # Replace pass by your implementation
-    pass
+    # pass
+    rho_matix = (R - R.T)/2
+    rho = np.array([[-rho_matix[1,2]],[rho_matix[0,2]],[rho_matix[1,0]]])
+    sin = np.linalg.norm(rho)
+
+    # trace is cos thetha.
+    cos = (R[0,0] + R[1,1] + R[2,2] - 1)/ 2
+    
+    if (sin != 0):
+        u = rho / sin
+        t = np.arctan2(sin,cos)
+        rotation_vector =  t * u
+        return rotation_vector
+
+    if (sin == 0 and cos == 1):
+        return np.zeros((3,1))
+    
+    if (sin == 0 and cos == -1):
+        uu_t = R + np.eye(3)
+        if (np.linalg.norm(uu_t[:,0]) != 0):
+            v = uu_t[:,0]
+        
+        elif(np.linalg.norm(uu_t[:,1]) != 0):
+            v = uu_t[:,1]
+        
+        else:
+            v = uu_t[:,2]
+        
+        u = v / np.linalg.norm(v)
+        
+        rotation_vector = u * np.pi
+        
+        r1 = rotation_vector[0,0]
+        r2 = rotation_vector[1,0]
+        r3 = rotation_vector[2,0]
+        
+        if ((r1 == 0 and r2 == 0 and r3 < 0) or (r1 == 0 and r2<0) or (r1<0)):
+            rotation_vector = -1 * rotation_vector
+            
+        return r
+    
 
 '''
 Q5.3: Rodrigues residual.
