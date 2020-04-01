@@ -62,5 +62,5 @@ np.savez('q3_3.npz', M2=m2, C2=c2, P=p)
 
 helper.epipolarMatchGUI(image1, image2, fundamental_matrix)
 print("essential matrix is: ", essential_matrix)
-helper.displayEpipolarF(image1, image2, fundamental_matrix)
+# helper.displayEpipolarF(image1, image2, fundamental_matrix)
 
