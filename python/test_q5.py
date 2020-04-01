@@ -19,6 +19,12 @@ image2 = plt.imread('../data/im2.png')
 m = np.max(image1.shape)
 
 # find fundamental matrix
-fundamental_matrix, _ = submission.ransacF(pts1, pts2, m, 2, 0.003)
+# fundamental_matrix = submission.eightpoint(pts1, pts2, m)
+
+fundamental_matrix, _ = submission.ransacF(pts1, pts2, m, 100, 0.002)
 print(fundamental_matrix)
 helper.displayEpipolarF(image1, image2, fundamental_matrix)
+
+
+# with bundle adjustment.
+
