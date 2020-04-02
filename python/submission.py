@@ -454,6 +454,132 @@ Q6.1 Multi-View Reconstruction of keypoints.
 '''
 def MultiviewReconstruction(C1, pts1, C2, pts2, C3, pts3, Thres):
     # Replace pass by your implementation
-    pass
+    # pass
+
+    # traingulate using all 3 views and get the 3d point. 
+
+    # calculate residuals for all three pairs of points. 
+    # find the pair with the lowest residual error. 
+
+    # run bundle adjustment on that. 
+    # Return the optimised points and the error.
+
+    # other approach do bundleAdjustment for all.
+
+    # the new bundleAdjustment function should return only the optimised points.
+    # the rodriguez residual function should take (C1, pts1, C2, pts2, C3, pts3, 3d points) and return a residual.
+    ind = np.argmin(np.array([np.sum(pts1[:, 2] > Thres), np.sum(pts2[:, 2] > Thres), np.sum(pts3[:, 2] > Thres)]))
+
+    if ind == 0:
+        ind = pts1[:, 2] > Thres
+    elif ind == 1:
+        ind = pts2[:, 2] > Thres
+
+    elif ind == 2:
+        ind = pts3[:, 2] > Thres
+
+    pts1, pts2, pts3 = pts1[ind][:, [0, 1]], pts2[ind][: , [0, 1]], pts3[ind][:, [0, 1]]
+
+    num_pts, _ = pts1.shape
+    # print("num_pts is: ", num_pts)
+
+    output_pts = np.zeros((num_pts, 3))
+    output_pts_homo = np.zeros((num_pts, 4))
+    
+    for i in range(num_pts):
+        x1 = pts1[i, 0]
+        y1 = pts1[i, 1]
+
+        x2 = pts2[i, 0]
+        y2 = pts2[i, 1]
+
+        x3 = pts3[i, 0]
+        y3 = pts3[i, 1]
+
+        a = np.zeros((6, 4))
+
+        a[0] = x1 * C1[2] - C1[0]
+        a[1] = y1 * C1[2] - C1[1]
+
+        a[2] = x2 * C2[2] - C2[0]
+        a[3] = y2 * C2[2] - C2[1]
+
+        a[4] = x3 * C3[2] - C3[0]
+        a[5] = y3 * C3[2] - C3[0]
+
+        u, s, vh = np.linalg.svd(a)
+        p = vh[-1, :]
+        p = p/p[3]
+        output_pts[i] = p[0:3]
+        output_pts_homo[i] = p
+
+    # print("shape of output_pts is: ", output_pts.shape)
+    # print("initial triangulation successful")
+    
+    pts = bundleAdjustment_multiview(C1, pts1, C2, pts2, C3, pts3, output_pts)
+    # print("passed bundle")
+    error = rodriguesResidual_multiview(C1, pts1, C2, pts2, C3, pts3, pts)
+
+    error = (error ** 2).sum()
+    pts = pts.reshape(pts1.shape[0], 3)
+
+    return pts, error
+
+def bundleAdjustment_multiview(C1, p1, C2,  p2, C3, p3, P_init):
+    # Replace pass by your implementation
+    
+    # print("shape of p1 is: ", p1.shape)
+    f = lambda x: (rodriguesResidual_multiview(C1, p1, C2, p2, C3, p3, x)**2).sum()
+
+    num_points = p1.shape[0]
+    
+    x0 = P_init    
+    # print("shape of x0 is: ", x0.shape)
+    # print("x0 is: ", x0)
+    print("error before bundleadjestment: ", np.sqrt((rodriguesResidual_multiview(C1, p1, C2, p2, C3, p3, x0)**2).sum()))
+    res = scipy.optimize.minimize(f, x0)
+    
+    x = res.x
+
+    return x
 
 
+def rodriguesResidual_multiview(C1, p1, C2, p2, C3, p3, p):
+    # Replace pass by your implementation
+    # pass
+
+    # c1 = K1.dot(M1)
+    
+    # print("p is: ", p)
+    num_points = p1.shape[0]
+    p = p.reshape(num_points, 3)
+    # print("reached here..")
+    # print("shape of p is: ", p.shape)
+    # print("shape of ones is: ", np.ones((num_points,1)).shape)
+
+    p_homogenous = np.hstack((p,np.ones((num_points,1))))
+
+    # print("passed hstack")
+
+    projected1_homogenous = C1.dot(p_homogenous.T)
+    projected1 = projected1_homogenous / projected1_homogenous[-1, :]
+
+    projected2_homogenous = C2.dot(p_homogenous.T)
+    projected2 = projected2_homogenous / projected2_homogenous[-1, :]
+
+    projected3_homogenous = C3.dot(p_homogenous.T)
+    projected3 = projected3_homogenous / projected3_homogenous[-1, :]
+
+
+    p1_hat = projected1.T[:, 0:2]
+    p2_hat = projected2.T[:, 0:2]
+
+    p3_hat = projected3.T[:, 0:2]
+
+    # print("shape of p2hat is: ", p2_hat.shape)
+    # print("shape of p2 is: ", p2.shape)
+    
+    residuals = np.concatenate([(p1 - p1_hat).reshape([-1]), 
+        (p2 - p2_hat).reshape([-1]), (p3 - p3_hat).reshape([-1])]).reshape(6 * num_points,1)
+
+    return residuals
